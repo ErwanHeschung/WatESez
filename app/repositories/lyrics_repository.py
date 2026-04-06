@@ -3,6 +3,7 @@ from sqlalchemy import select
 from app.models.entities.lyrics import Lyrics
 from typing import Optional
 
+
 class LyricsRepository:
     def __init__(self, session: AsyncSession):
         self.session = session

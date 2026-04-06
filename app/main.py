@@ -7,18 +7,21 @@ from app.workers.audio_worker import process_audio_queue
 from contextlib import asynccontextmanager
 import asyncio
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     worker_task = asyncio.create_task(process_audio_queue())
     print("Background Audio Queue Worker Started")
-    
+
     yield
-    
+
     worker_task.cancel()
     print("Background Audio Queue Worker Stopped")
 
+
 app = FastAPI(title="WatESez", lifespan=lifespan)
 app.include_router(lyrics_router.router)
+
 
 @app.get(
     "/health",
@@ -30,10 +33,11 @@ app.include_router(lyrics_router.router)
 async def get_health():
     return HealthCheck(status="OK")
 
+
 if __name__ == "__main__":
     uvicorn.run(
-        "app.main:app", 
+        "app.main:app",
         host=settings.service_host,
-        port=settings.service_port, 
-        reload=True
+        port=settings.service_port,
+        reload=True,
     )

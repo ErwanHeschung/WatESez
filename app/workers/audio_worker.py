@@ -8,13 +8,14 @@ from app.configs.settings import settings
 
 audio_queue = asyncio.Queue(maxsize=settings.audio_queue_max_size)
 
+
 async def process_audio_queue():
     noise_remover = NoiseRemoverService()
     stt = STTService()
 
     while True:
         file_bytes, filename = await audio_queue.get()
-        
+
         try:
             print(f"Started processing: {filename}")
 
@@ -23,15 +24,15 @@ async def process_audio_queue():
                 audio_service = AudioService(
                     noise_remover_service=noise_remover,
                     stt_service=stt,
-                    lyrics_repo=repo
+                    lyrics_repo=repo,
                 )
-                
+
                 await audio_service.register_lyrics(file_bytes, filename)
-                
+
             print(f"Finished processing: {filename}")
-            
+
         except Exception as e:
             print(f"Error processing {filename}: {e}")
-            
+
         finally:
             audio_queue.task_done()

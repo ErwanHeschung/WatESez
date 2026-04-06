@@ -5,23 +5,26 @@ from pathlib import Path
 from audio_separator.separator import Separator
 import aiofiles
 
+
 class NoiseRemoverService:
     def __init__(self):
         self.storage_dir = Path("./storage")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
         self.separator = None
-    
+
     def _load_ai_model(self):
         self.separator = Separator()
         self.separator.load_model(settings.separate_model)
 
-    async def remove_instrumental(self, audio_bytes: bytes, filename: str) -> io.BytesIO:
+    async def remove_instrumental(
+        self, audio_bytes: bytes, filename: str
+    ) -> io.BytesIO:
         if self.separator is None:
             await asyncio.to_thread(self._load_ai_model)
-            
+
         input_path = self.storage_dir / f"input_{filename}"
-        
+
         async with aiofiles.open(input_path, "wb") as f:
             await f.write(audio_bytes)
 
@@ -31,7 +34,7 @@ class NoiseRemoverService:
         vocal_path = Path(vocal_filename)
 
         exported_io = io.BytesIO()
-        
+
         async with aiofiles.open(vocal_path, "rb") as f:
             exported_io.write(await f.read())
 
@@ -41,16 +44,17 @@ class NoiseRemoverService:
 
         exported_io.seek(0)
         return exported_io
-    
+
     async def save_to_storage(self, buffer: io.BytesIO, original_name: str) -> str:
         safe_name = f"vocals_{original_name}"
         file_path = self.storage_dir / safe_name
-        
+
         buffer.seek(0)
         with open(file_path, "wb") as f:
             f.write(buffer.getbuffer())
 
         return str(file_path)
+
 
 def get_noise_remover_service() -> NoiseRemoverService:
     return NoiseRemoverService()
