@@ -1,3 +1,4 @@
+import asyncio
 import io
 from app.models.dtos.lyrics import LyricLine, SongLyrics
 from faster_whisper import WhisperModel
@@ -6,9 +7,16 @@ from fastapi.concurrency import run_in_threadpool
 
 class STTService:
     def __init__(self):
+        self.model = None
+    
+    def _load_ai_model(self):
+        """Synchronous helper method to load Whisper into memory."""
         self.model = WhisperModel(settings.whisper_model, device="cpu", compute_type="int8")
 
     async def find_lyrics(self, audio: io.BytesIO) -> SongLyrics:
+        if self.model is None:
+            await asyncio.to_thread(self._load_ai_model)
+            
         audio.seek(0)
 
         def sync_process():
