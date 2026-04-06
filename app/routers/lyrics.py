@@ -1,10 +1,8 @@
 from fileinput import filename
 
-from fastapi import APIRouter, UploadFile, HTTPException, BackgroundTasks
-from app.dependencies import AudioServiceDep
+from fastapi import APIRouter, UploadFile, HTTPException
 from app.models.dtos.error_response import ErrorResponse
-
-
+from app.workers.audio_worker import audio_queue
 
 router = APIRouter(
     prefix="/lyrics",
@@ -25,18 +23,17 @@ router = APIRouter(
     }
 )
 async def upload_audio(
-    file: UploadFile, 
-    background_tasks: BackgroundTasks,
-    service: AudioServiceDep    
+    file: UploadFile
 ):
     if not file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="File must be an audio type")
     
     file_bytes = await file.read()
     filename = file.filename or "unknown file"
-
-    background_tasks.add_task(service.register_lyrics, file_bytes, filename)
+    
+    await audio_queue.put((file_bytes, filename))
+    
     return {
-        "status": "processing", 
-        "message": f"{filename} is being processed in the background."
+        "status": "queued", 
+        "message": f"{filename} has been added to the processing queue. Position: {audio_queue.qsize()}"
     }

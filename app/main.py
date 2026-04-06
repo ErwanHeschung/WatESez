@@ -3,8 +3,21 @@ from app.models.dtos.health_check import HealthCheck
 from app.routers import lyrics
 from app.configs.settings import settings
 import uvicorn
+from app.workers.audio_worker import process_audio_queue
+from contextlib import asynccontextmanager
+import asyncio
 
-app = FastAPI(title="WatESez")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    worker_task = asyncio.create_task(process_audio_queue())
+    print("Background Audio Queue Worker Started")
+    
+    yield
+    
+    worker_task.cancel()
+    print("Background Audio Queue Worker Stopped")
+
+app = FastAPI(title="WatESez", lifespan=lifespan)
 app.include_router(lyrics.router)
 
 @app.get(
