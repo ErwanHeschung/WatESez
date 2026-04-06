@@ -1,4 +1,5 @@
 import io
+from app.configs.settings import settings
 from fastapi import UploadFile
 from pathlib import Path
 from audio_separator.separator import Separator
@@ -9,7 +10,7 @@ class NoiseRemoverService:
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
         self.separator = Separator()
-        self.separator.load_model('UVR-MDX-NET-Voc_FT.onnx')
+        self.separator.load_model(settings.separate_model)
 
     async def remove_instrumental(self, file: UploadFile) -> io.BytesIO:
         input_path = self.storage_dir / f"input_{file.filename}"

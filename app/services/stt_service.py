@@ -1,18 +1,34 @@
 import io
+from app.models.lyrics import LyricLine, SongLyrics
 from faster_whisper import WhisperModel
+from app.configs.settings import settings
+from fastapi.concurrency import run_in_threadpool
 
 class STTService:
     def __init__(self):
-        self.model = WhisperModel("large-v3-turbo", device="cpu", compute_type="int8")
+        self.model = WhisperModel(settings.whisper_model, device="cpu", compute_type="int8")
 
-    async def find_lyrics(self, audio: io.BytesIO) -> str:
+    async def find_lyrics(self, audio: io.BytesIO) -> SongLyrics:
         audio.seek(0)
-        segments, _ = self.model.transcribe(audio, beam_size=1, vad_filter=True)
 
-        lyrics_list = [segment.text.strip() for segment in segments]
-        full_lyrics = "\n".join(lyrics_list)
+        def sync_process():
+            seg_gen, info_obj = self.model.transcribe(audio, beam_size=1, vad_filter=True)
+            return list(seg_gen), info_obj
 
-        return full_lyrics
+        segments, info = await run_in_threadpool(sync_process)
 
+        lyrics_data = [
+            LyricLine(
+                start=round(s.start, 2),
+                end=round(s.end, 2),
+                text=s.text.strip()
+            ) for s in segments
+        ]
+
+        return SongLyrics(
+            language=info.language,
+            lyrics=lyrics_data
+        )
+        
 def get_stt_service() -> STTService:
     return STTService()

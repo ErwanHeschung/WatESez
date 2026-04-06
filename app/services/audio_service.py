@@ -7,7 +7,7 @@ class AudioService:
         self.noise_remover_service = noise_remover_service
         self.stt_service = stt_service
     
-    async def extract_lyrics(self, file: UploadFile) -> str:
+    async def register_lyrics(self, file: UploadFile) -> str:
         cleaned_buffer = await self.noise_remover_service.remove_instrumental(file)
         await self.noise_remover_service.save_to_storage(cleaned_buffer, file.filename)
         lyrics = await self.stt_service.find_lyrics(cleaned_buffer)

@@ -9,7 +9,7 @@ router = APIRouter(
 )
 
 @router.post(
-    "/from-audio",
+    "/register",
     responses={
         400: {
             "model": ErrorResponse,
@@ -27,5 +27,5 @@ async def upload_audio(
     if not file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="File must be an audio type")
 
-    result = await service.extract_lyrics(file)
+    result = await service.register_lyrics(file)
     return result
