@@ -9,7 +9,6 @@ sys.path.insert(0, abspath(dirname(dirname(__file__))))
 
 from app.configs.settings import settings
 from app.models.entities.base import Base
-from app.models.entities.lyrics import Lyrics
 
 config = context.config
 
