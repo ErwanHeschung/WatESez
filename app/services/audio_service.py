@@ -67,6 +67,9 @@ class AudioService:
         
         return hashed_fingerprint
     
+    def get_lyrics_by_fingerprint(self, fingerprint: str) -> Lyrics | None:
+        return self.lyrics_repo.get_by_fingerprint(fingerprint)
+    
 
 def get_audio_service(
     noise_remover: NoiseRemoverService = Depends(get_noise_remover_service),

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.models.dtos.health_check import HealthCheck
-from app.routers import lyrics
+from app.routers import lyrics_router
 from app.configs.settings import settings
 import uvicorn
 from app.workers.audio_worker import process_audio_queue
@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     print("Background Audio Queue Worker Stopped")
 
 app = FastAPI(title="WatESez", lifespan=lifespan)
-app.include_router(lyrics.router)
+app.include_router(lyrics_router.router)
 
 @app.get(
     "/health",
