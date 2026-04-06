@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.models.health_check import HealthCheck
+from app.models.dtos.health_check import HealthCheck
 from app.routers import lyrics
 from app.configs.settings import settings
 import uvicorn

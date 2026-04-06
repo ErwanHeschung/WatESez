@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, HTTPException
 from app.dependencies import AudioServiceDep
-from app.models.error_response import ErrorResponse
+from app.models.dtos.error_response import ErrorResponse
 
 
 router = APIRouter(

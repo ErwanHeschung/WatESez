@@ -1,5 +1,5 @@
 import io
-from app.models.lyrics import LyricLine, SongLyrics
+from app.models.dtos.lyrics import LyricLine, SongLyrics
 from faster_whisper import WhisperModel
 from app.configs.settings import settings
 from fastapi.concurrency import run_in_threadpool

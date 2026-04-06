@@ -12,5 +12,6 @@ dependencies = [
     "faster-whisper>=1.2.1",
     "onnxruntime>=1.24.4",
     "onnxruntime-gpu>=1.24.4",
+    "psycopg2-binary>=2.9.11",
     "sqlalchemy>=2.0.49",
 ]
