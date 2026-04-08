@@ -27,3 +27,5 @@ htmlcov/
 # IDEs
 .vscode/
 .idea/
+
+ai_models_cache/

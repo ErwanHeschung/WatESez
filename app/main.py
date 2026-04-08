@@ -39,5 +39,4 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.service_host,
         port=settings.service_port,
-        reload=True,
     )

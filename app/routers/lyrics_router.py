@@ -16,8 +16,14 @@ router = APIRouter(prefix="/lyrics", tags=["lyrics"])
     },
 )
 async def upload_audio(file: UploadFile):
-    if not file.content_type.startswith("audio/"):
-        raise HTTPException(status_code=400, detail="File must be an audio type")
+    if not file:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+
+    if not file.content_type or not file.content_type.startswith("audio/"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {file.content_type}. Please upload an audio file.",
+        )
 
     file_bytes = await file.read()
     filename = file.filename or "unknown file"

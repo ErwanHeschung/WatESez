@@ -1,3 +1,6 @@
+import asyncio
+import hashlib
+import chromaprint
 from app.repositories.lyrics_repository import LyricsRepository
 from fastapi import Depends
 from app.services.noise_remover_service import (
@@ -8,9 +11,6 @@ from app.services.stt_service import STTService, get_stt_service
 from app.models.entities.lyrics import Lyrics
 from app.configs.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-import subprocess
-import json
-import hashlib
 
 
 class AudioService:
@@ -25,7 +25,7 @@ class AudioService:
         self.lyrics_repo = lyrics_repo
 
     async def register_lyrics(self, file_bytes: bytes, filename: str) -> None:
-        fingerprint = self.generate_acoustic_fingerprint(file_bytes)
+        fingerprint = await self.generate_acoustic_fingerprint(file_bytes)
 
         existing = await self.lyrics_repo.get_by_fingerprint(fingerprint)
         if existing:
@@ -34,8 +34,6 @@ class AudioService:
         cleaned_buffer = await self.noise_remover_service.remove_instrumental(
             file_bytes, filename
         )
-
-        await self.noise_remover_service.save_to_storage(cleaned_buffer, filename)
 
         song_lyrics_dto = await self.stt_service.find_lyrics(cleaned_buffer)
 
@@ -48,34 +46,40 @@ class AudioService:
         await self.lyrics_repo.save(new_record)
 
     @staticmethod
-    def generate_acoustic_fingerprint(audio_bytes: bytes) -> str:
-        command = ["fpcalc", "-json", "-length", "0", "-"]
+    async def generate_acoustic_fingerprint(audio_bytes: bytes) -> str:
+        async def _fingerprint():
+            pcm_process = await asyncio.create_subprocess_exec(
+                "ffmpeg",
+                "-i",
+                "pipe:0",
+                "-ar",
+                "44100",
+                "-ac",
+                "1",
+                "-f",
+                "s16le",
+                "pipe:1",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            pcm_data, _ = await pcm_process.communicate(input=audio_bytes)
 
-        process = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+            if pcm_process.returncode != 0:
+                raise RuntimeError("ffmpeg decode failed")
 
-        stdout, stderr = process.communicate(input=audio_bytes)
+            fp = chromaprint.Fingerprinter()
+            fp.start(44100, 1)
+            fp.feed(pcm_data)
+            raw_fingerprint = fp.finish()
+            if not raw_fingerprint:
+                return ""
+            return hashlib.sha256(raw_fingerprint).hexdigest()
 
-        if process.returncode != 0:
-            raise RuntimeError(f"fpcalc failed: {stderr.decode()}")
+        return await _fingerprint()
 
-        result = json.loads(stdout.decode())
-        fingerprint_list = result.get("fingerprint", [])
-
-        raw_acoustic_string = ",".join(map(str, fingerprint_list))
-
-        hashed_fingerprint = hashlib.sha256(
-            raw_acoustic_string.encode("utf-8")
-        ).hexdigest()
-
-        return hashed_fingerprint
-
-    def get_lyrics_by_fingerprint(self, fingerprint: str) -> Lyrics | None:
-        return self.lyrics_repo.get_by_fingerprint(fingerprint)
+    async def get_lyrics_by_fingerprint(self, fingerprint: str) -> Lyrics | None:
+        return await self.lyrics_repo.get_by_fingerprint(fingerprint)
 
 
 def get_audio_service(

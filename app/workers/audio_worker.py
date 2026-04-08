@@ -17,8 +17,6 @@ async def process_audio_queue():
         file_bytes, filename = await audio_queue.get()
 
         try:
-            print(f"Started processing: {filename}")
-
             async with async_session_maker() as db_session:
                 repo = LyricsRepository(session=db_session)
                 audio_service = AudioService(
@@ -26,13 +24,10 @@ async def process_audio_queue():
                     stt_service=stt,
                     lyrics_repo=repo,
                 )
-
                 await audio_service.register_lyrics(file_bytes, filename)
 
-            print(f"Finished processing: {filename}")
-
         except Exception as e:
-            print(f"Error processing {filename}: {e}")
+            print(f"Error processing {filename}: {e}", flush=True)
 
         finally:
             audio_queue.task_done()

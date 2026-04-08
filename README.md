@@ -15,7 +15,7 @@
 
 ## What is WatESez?
 
-WatESez is a FastAPI service that takes an audio file and gives you back the lyrics. You upload a song, and it handles everything behind the scenes:  isolating the vocals, transcribing them to text, and saving the result so you can grab it anytime later.
+WatESez is a FastAPI service that takes an audio file and gives you back the lyrics. You upload a song, and it handles everything behind the scenes: isolating the vocals, transcribing them to text, and saving the result so you can grab it anytime later.
 
 It also generates an acoustic fingerprint for every track you upload. That means if you send the same song twice, it'll recognize it and skip the work. No wasted processing.
 
@@ -33,7 +33,7 @@ flowchart LR
 Here's what happens step by step:
 
 1. You send an audio file to `POST /lyrics/register`. It gets queued up right away and you get a `202 Accepted` back instantly. No waiting around.
-2. An acoustic fingerprint is generated using `fpcalc` (Chromaprint) and hashed with SHA-256. This is how WatESez knows if it's seen this song before.
+2. An acoustic fingerprint is generated using Chromaprint. This is how WatESez knows if it's seen this song before.
 3. The instrumental gets stripped out with `audio-separator`, leaving only the vocals.
 4. `faster-whisper` listens to those isolated vocals and transcribes them into time-stamped lyrics, with language detection included.
 5. Everything gets saved to PostgreSQL. You can pull the lyrics back anytime with `GET /lyrics/{fingerprint}`.
@@ -46,7 +46,6 @@ A background worker handles the queue asynchronously, so the API stays snappy ev
 
 - Python 3.13 or newer
 - A running PostgreSQL instance
-- `fpcalc` (Chromaprint) installed on your system
 - FFmpeg in your PATH
 
 ### Installation
@@ -54,7 +53,7 @@ A background worker handles the queue asynchronously, so the API stays snappy ev
 1. Clone the repo
 
    ```bash
-   git clone https://github.com/your-username/WatESez.git
+   git clone https://github.com/ErwanHeschung/WatESez.git
    cd WatESez
    ```
 
@@ -82,26 +81,90 @@ A background worker handles the queue asynchronously, so the API stays snappy ev
    uv run python -m app.main
    ```
 
-   The API runs on `http://localhost:8000`. You can also check out the interactive docs at `/docs`.
+   The API runs on `http://localhost:8100`. You can also check out the interactive docs at `/docs`.
 
 ### Try It Out
 
 Register an audio file:
 
 ```bash
-curl -X POST http://localhost:8000/lyrics/register \
+curl -X POST http://localhost:8100/lyrics/register \
   -F "file=@mysong.mp3"
 ```
 
 Grab the lyrics once processing is done:
 
 ```bash
-curl http://localhost:8000/lyrics/{fingerprint}
+curl http://localhost:8100/lyrics/{fingerprint}
 ```
 
 ## Docker
 
-A fully dockerized setup with PostgreSQL, FFmpeg, and fpcalc all pre-configured is planned. Just not quite ready yet.
+WatESez is production-ready with a fully dockerized setup including PostgreSQL, FFmpeg, and Chromaprint for audio fingerprinting.
+
+### Production Deployment
+
+1. Copy the example environment file:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **CUSTOMIZE FOR PRODUCTION**:
+   - **Change all passwords** in `.env` (especially `DB_PASSWORD`)
+   - Consider using a secrets manager or Docker secrets in production
+   - Adjust `WHISPER_MODEL` and `SEPARATE_MODEL` if needed for your use case
+   - Set appropriate values for `AUDIO_QUEUE_MAX_SIZE` based on your hardware
+
+3. Start the stack:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   This will:
+   - Start PostgreSQL on port 5433 (5432 inside container)
+   - Build and run the WatESez app on port 8100
+   - Automatically run database migrations on startup
+   - Apply healthchecks to ensure service readiness
+
+4. The API will be available at `http://localhost:8100`. Interactive docs at `/docs`.
+
+### Development
+
+If you want to rebuild after code changes:
+
+```bash
+docker compose up -d --build
+```
+
+To view logs:
+
+```bash
+docker compose logs -f
+```
+
+To stop and remove containers:
+
+```bash
+docker compose down
+```
+
+### Common Log Messages (Non-Critical)
+
+You may see these warnings in logs - they are safe to ignore:
+- `locale: not found` / `no usable system locales were found` (PostgreSQL in Alpine container)
+- `GPU device discovery failed: .../sys/class/drm/card0/device/vendor` (ONNX Runtime in container without GPU)
+
+These do not affect functionality - the app will use CPU fallbacks automatically.
+
+### Notes
+
+- Default credentials in `.env.example` are intentionally weak - **you must change them for any non-trivial deployment**
+- The healthcheck endpoint (`/health`) ensures the app is ready before marking containers healthy
+- Audio files persist between container restarts via the storage volume mount
+- Model files persist via the ai_models_cache volume to avoid repeated downloads
+- **Security**: The app runs in the container; `SERVICE_HOST=0.0.0.0` is correct for Docker (binds to all interfaces)
 
 ## Tech Stack
 
@@ -112,9 +175,12 @@ A fully dockerized setup with PostgreSQL, FFmpeg, and fpcalc all pre-configured 
 | Migrations     | Alembic              |
 | Noise Removal  | audio-separator      |
 | Speech-to-Text | faster-whisper       |
-| Fingerprinting | Chromaprint (fpcalc) |
+| Fingerprinting | Chromaprint          |
 | Package Manager| uv                   |
 
-## License
+## Roadmap
 
-MIT
+### Planned Enhancements
+
+- **Audio Fingerprint Similarity**: Implement perceptual hashing and similarity detection to identify covers, remixes, and different versions of the same song beyond exact fingerprint matches
+- **Manual Lyrics Editing**: Add `PATCH /lyrics/{fingerprint}` endpoint to allow users to correct transcription errors or add metadata like song titles and artists

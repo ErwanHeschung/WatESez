@@ -45,16 +45,6 @@ class NoiseRemoverService:
         exported_io.seek(0)
         return exported_io
 
-    async def save_to_storage(self, buffer: io.BytesIO, original_name: str) -> str:
-        safe_name = f"vocals_{original_name}"
-        file_path = self.storage_dir / safe_name
-
-        buffer.seek(0)
-        with open(file_path, "wb") as f:
-            f.write(buffer.getbuffer())
-
-        return str(file_path)
-
 
 def get_noise_remover_service() -> NoiseRemoverService:
     return NoiseRemoverService()

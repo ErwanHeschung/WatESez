@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.env
+.git/
+.gitignore
+
+storage/
+ai_models_cache/
+.venv/
+
+Dockerfile
+docker-compose.yml
+README.md
