@@ -8,7 +8,7 @@ from alembic import context
 sys.path.insert(0, abspath(dirname(dirname(__file__))))
 
 from app.configs.settings import settings
-from app.models.entities.base import Base
+from app.models.entities import Base
 
 config = context.config
 

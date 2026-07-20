@@ -24,12 +24,17 @@ class AudioService:
         self.stt_service = stt_service
         self.lyrics_repo = lyrics_repo
 
-    async def register_lyrics(self, file_bytes: bytes, filename: str) -> None:
+    async def register_lyrics(self, file_bytes: bytes, filename: str) -> str:
+        """Transcribe and store lyrics, returning the track's fingerprint.
+
+        The fingerprint is returned even when the track was already known, so
+        the caller can always point at the resulting lyrics.
+        """
         fingerprint = await self.generate_acoustic_fingerprint(file_bytes)
 
         existing = await self.lyrics_repo.get_by_fingerprint(fingerprint)
         if existing:
-            return
+            return fingerprint
 
         cleaned_buffer = await self.noise_remover_service.remove_instrumental(
             file_bytes, filename
@@ -44,6 +49,8 @@ class AudioService:
         )
 
         await self.lyrics_repo.save(new_record)
+
+        return fingerprint
 
     @staticmethod
     async def generate_acoustic_fingerprint(audio_bytes: bytes) -> str:

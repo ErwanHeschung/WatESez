@@ -6,17 +6,29 @@ import uvicorn
 from app.workers.audio_worker import process_audio_queue
 from contextlib import asynccontextmanager
 import asyncio
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     worker_task = asyncio.create_task(process_audio_queue())
-    print("Background Audio Queue Worker Started")
+    logger.info("Background audio worker started")
 
     yield
 
     worker_task.cancel()
-    print("Background Audio Queue Worker Stopped")
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("Background audio worker stopped")
 
 
 app = FastAPI(title="WatESez", lifespan=lifespan)
