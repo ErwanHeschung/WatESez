@@ -6,6 +6,12 @@ class Settings(BaseSettings):
 
     whisper_model: str = "large-v3-turbo"
     separate_model: str = "UVR-MDX-NET-Voc_FT.onnx"
+    whisper_compute_type: str = "int8_float32"
+    whisper_beam_size: int = 5
+    whisper_language: str | None = None
+    whisper_word_timestamps: bool = True
+    whisper_min_avg_logprob: float = -1.0
+    whisper_max_no_speech_prob: float = 0.6
     service_port: int = 8100
     service_host: str = "0.0.0.0"
 
