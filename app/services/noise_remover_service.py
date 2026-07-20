@@ -23,7 +23,8 @@ class NoiseRemoverService:
         if self.separator is None:
             await asyncio.to_thread(self._load_ai_model)
 
-        input_path = self.storage_dir / f"input_{filename}"
+        safe_name = Path(filename).name or "upload"
+        input_path = self.storage_dir / f"input_{safe_name}"
 
         async with aiofiles.open(input_path, "wb") as f:
             await f.write(audio_bytes)

@@ -73,7 +73,7 @@ class AudioService:
             fp.feed(pcm_data)
             raw_fingerprint = fp.finish()
             if not raw_fingerprint:
-                return ""
+                raise RuntimeError("chromaprint produced an empty fingerprint")
             return hashlib.sha256(raw_fingerprint).hexdigest()
 
         return await _fingerprint()

@@ -17,6 +17,8 @@ FROM python:3.13-slim-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    libchromaprint1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,6 +28,9 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
+# Pin the HF cache so the faster-whisper weights land on a mountable path
+# instead of the default ~/.cache, which is not persisted between rebuilds.
+ENV HF_HOME=/models/huggingface
 
 EXPOSE 8100
 

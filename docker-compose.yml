@@ -24,6 +24,8 @@ services:
       - "8100:8100"
     volumes:
       - ./ai_models_cache:/tmp/audio-separator-models
+      - whisper_cache:/models/huggingface
+      - ./storage:/app/storage
     depends_on:
       db:
         condition: service_healthy
@@ -41,3 +43,4 @@ services:
 
 volumes:
   postgres_data:
+  whisper_cache:
