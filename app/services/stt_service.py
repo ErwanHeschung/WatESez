@@ -24,6 +24,7 @@ class STTService:
             settings.whisper_model,
             device="cpu",
             compute_type=settings.whisper_compute_type,
+            cpu_threads=settings.whisper_cpu_threads,
         )
 
     async def find_lyrics(self, audio: io.BytesIO) -> SongLyrics:
@@ -74,7 +75,3 @@ class STTService:
         if segment.no_speech_prob > settings.whisper_max_no_speech_prob:
             return False
         return True
-
-
-def get_stt_service() -> STTService:
-    return STTService()

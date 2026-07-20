@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     whisper_word_timestamps: bool = True
     whisper_min_avg_logprob: float = -1.0
     whisper_max_no_speech_prob: float = 0.6
+    whisper_cpu_threads: int = 0
     service_port: int = 8100
     service_host: str = "0.0.0.0"
 

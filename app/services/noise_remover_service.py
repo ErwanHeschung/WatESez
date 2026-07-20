@@ -29,23 +29,29 @@ class NoiseRemoverService:
         async with aiofiles.open(input_path, "wb") as f:
             await f.write(audio_bytes)
 
-        output_files = await asyncio.to_thread(self.separator.separate, str(input_path))
+        output_files = []
+        try:
+            output_files = await asyncio.to_thread(
+                self.separator.separate, str(input_path)
+            )
 
-        vocal_filename = next(f for f in output_files if "Vocals" in f)
-        vocal_path = Path(vocal_filename)
+            vocal_filename = next(
+                (f for f in output_files if "Vocals" in f), None
+            )
+            if vocal_filename is None:
+                raise RuntimeError(
+                    f"No vocal stem in separator output for {safe_name!r}. "
+                    f"Got: {output_files}"
+                )
 
-        exported_io = io.BytesIO()
+            exported_io = io.BytesIO()
+            async with aiofiles.open(Path(vocal_filename), "rb") as f:
+                exported_io.write(await f.read())
 
-        async with aiofiles.open(vocal_path, "rb") as f:
-            exported_io.write(await f.read())
-
-        input_path.unlink(missing_ok=True)
-        for file in output_files:
-            Path(file).unlink(missing_ok=True)
+        finally:
+            input_path.unlink(missing_ok=True)
+            for file in output_files:
+                Path(file).unlink(missing_ok=True)
 
         exported_io.seek(0)
         return exported_io
-
-
-def get_noise_remover_service() -> NoiseRemoverService:
-    return NoiseRemoverService()

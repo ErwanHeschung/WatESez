@@ -4,7 +4,7 @@ from pathlib import Path
 import aiofiles
 from fastapi import APIRouter, UploadFile, HTTPException, status
 
-from app.dependencies import AudioServiceDep, JobRepositoryDep
+from app.dependencies import JobRepositoryDep, LyricsRepositoryDep
 from app.configs.settings import settings
 from app.models.dtos.error_response import ErrorResponse
 from app.models.dtos.job import JobAccepted, JobStatusResponse
@@ -105,8 +105,8 @@ async def get_job(job_id: str, job_repo: JobRepositoryDep):
         500: {"description": "Internal Server Error during retrieval"},
     },
 )
-async def get_lyrics(fingerprint: str, audio_service: AudioServiceDep):
-    existing_lyrics = await audio_service.get_lyrics_by_fingerprint(fingerprint)
+async def get_lyrics(fingerprint: str, lyrics_repo: LyricsRepositoryDep):
+    existing_lyrics = await lyrics_repo.get_by_fingerprint(fingerprint)
 
     if not existing_lyrics:
         raise HTTPException(

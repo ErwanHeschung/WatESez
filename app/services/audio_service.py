@@ -2,15 +2,9 @@ import asyncio
 import hashlib
 import chromaprint
 from app.repositories.lyrics_repository import LyricsRepository
-from fastapi import Depends
-from app.services.noise_remover_service import (
-    NoiseRemoverService,
-    get_noise_remover_service,
-)
-from app.services.stt_service import STTService, get_stt_service
+from app.services.noise_remover_service import NoiseRemoverService
+from app.services.stt_service import STTService
 from app.models.entities.lyrics import Lyrics
-from app.configs.database import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class AudioService:
@@ -87,15 +81,3 @@ class AudioService:
 
     async def get_lyrics_by_fingerprint(self, fingerprint: str) -> Lyrics | None:
         return await self.lyrics_repo.get_by_fingerprint(fingerprint)
-
-
-def get_audio_service(
-    noise_remover: NoiseRemoverService = Depends(get_noise_remover_service),
-    stt: STTService = Depends(get_stt_service),
-    db: AsyncSession = Depends(get_db),
-) -> AudioService:
-    repo = LyricsRepository(session=db)
-
-    return AudioService(
-        noise_remover_service=noise_remover, stt_service=stt, lyrics_repo=repo
-    )
