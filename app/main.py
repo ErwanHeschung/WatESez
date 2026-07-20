@@ -1,13 +1,15 @@
-from fastapi import FastAPI
-from app.models.dtos.health_check import HealthCheck
-from app.routers import lyrics_router
-from app.configs.settings import settings
-import uvicorn
-from app.workers.audio_worker import process_audio_queue
-from contextlib import asynccontextmanager
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
+import uvicorn
+from fastapi import FastAPI
+
+from app.configs.settings import settings
+from app.exception_handlers import register_exception_handlers
+from app.models.dtos.health_check import HealthCheck
+from app.routers import jobs_router, lyrics_router
+from app.workers.audio_worker import process_audio_queue
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +26,7 @@ async def lifespan(app: FastAPI):
     yield
 
     worker_task.cancel()
+
     try:
         await worker_task
     except asyncio.CancelledError:
@@ -32,6 +35,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="WatESez", lifespan=lifespan)
+
+register_exception_handlers(app)
+
+# Order matters: jobs_router owns /lyrics/register and /lyrics/jobs/{job_id},
+# which would otherwise be captured by the /lyrics/{fingerprint} route.
+app.include_router(jobs_router.router)
 app.include_router(lyrics_router.router)
 
 

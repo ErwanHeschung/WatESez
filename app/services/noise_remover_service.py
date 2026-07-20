@@ -5,6 +5,8 @@ from pathlib import Path
 from audio_separator.separator import Separator
 import aiofiles
 
+from app.exceptions import SeparationError
+
 
 class NoiseRemoverService:
     def __init__(self):
@@ -35,11 +37,9 @@ class NoiseRemoverService:
                 self.separator.separate, str(input_path)
             )
 
-            vocal_filename = next(
-                (f for f in output_files if "Vocals" in f), None
-            )
+            vocal_filename = next((f for f in output_files if "Vocals" in f), None)
             if vocal_filename is None:
-                raise RuntimeError(
+                raise SeparationError(
                     f"No vocal stem in separator output for {safe_name!r}. "
                     f"Got: {output_files}"
                 )

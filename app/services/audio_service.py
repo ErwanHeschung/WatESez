@@ -1,19 +1,26 @@
-import asyncio
-import hashlib
-import chromaprint
+from app.models.entities.lyrics import Lyrics
 from app.repositories.lyrics_repository import LyricsRepository
+from app.services.fingerprint_service import FingerprintService
 from app.services.noise_remover_service import NoiseRemoverService
 from app.services.stt_service import STTService
-from app.models.entities.lyrics import Lyrics
 
 
 class AudioService:
+    """Orchestrates the transcription pipeline.
+
+    Owns the ordering of the steps and nothing else; fingerprinting,
+    separation, transcription and persistence each live behind their own
+    collaborator.
+    """
+
     def __init__(
         self,
+        fingerprint_service: FingerprintService,
         noise_remover_service: NoiseRemoverService,
         stt_service: STTService,
         lyrics_repo: LyricsRepository,
     ):
+        self.fingerprint_service = fingerprint_service
         self.noise_remover_service = noise_remover_service
         self.stt_service = stt_service
         self.lyrics_repo = lyrics_repo
@@ -24,60 +31,22 @@ class AudioService:
         The fingerprint is returned even when the track was already known, so
         the caller can always point at the resulting lyrics.
         """
-        fingerprint = await self.generate_acoustic_fingerprint(file_bytes)
+        fingerprint = await self.fingerprint_service.generate(file_bytes)
 
-        existing = await self.lyrics_repo.get_by_fingerprint(fingerprint)
-        if existing:
+        if await self.lyrics_repo.get_by_fingerprint(fingerprint):
             return fingerprint
 
-        cleaned_buffer = await self.noise_remover_service.remove_instrumental(
+        vocals = await self.noise_remover_service.remove_instrumental(
             file_bytes, filename
         )
+        song_lyrics = await self.stt_service.find_lyrics(vocals)
 
-        song_lyrics_dto = await self.stt_service.find_lyrics(cleaned_buffer)
-
-        new_record = Lyrics(
-            fingerprint=fingerprint,
-            language=song_lyrics_dto.language,
-            content=[line.model_dump() for line in song_lyrics_dto.lyrics],
+        await self.lyrics_repo.save(
+            Lyrics(
+                fingerprint=fingerprint,
+                language=song_lyrics.language,
+                content=[line.model_dump() for line in song_lyrics.lyrics],
+            )
         )
 
-        await self.lyrics_repo.save(new_record)
-
         return fingerprint
-
-    @staticmethod
-    async def generate_acoustic_fingerprint(audio_bytes: bytes) -> str:
-        async def _fingerprint():
-            pcm_process = await asyncio.create_subprocess_exec(
-                "ffmpeg",
-                "-i",
-                "pipe:0",
-                "-ar",
-                "44100",
-                "-ac",
-                "1",
-                "-f",
-                "s16le",
-                "pipe:1",
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            pcm_data, _ = await pcm_process.communicate(input=audio_bytes)
-
-            if pcm_process.returncode != 0:
-                raise RuntimeError("ffmpeg decode failed")
-
-            fp = chromaprint.Fingerprinter()
-            fp.start(44100, 1)
-            fp.feed(pcm_data)
-            raw_fingerprint = fp.finish()
-            if not raw_fingerprint:
-                raise RuntimeError("chromaprint produced an empty fingerprint")
-            return hashlib.sha256(raw_fingerprint).hexdigest()
-
-        return await _fingerprint()
-
-    async def get_lyrics_by_fingerprint(self, fingerprint: str) -> Lyrics | None:
-        return await self.lyrics_repo.get_by_fingerprint(fingerprint)

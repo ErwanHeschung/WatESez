@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from app.exceptions import SeparationError
 from app.services.noise_remover_service import NoiseRemoverService
 
 
@@ -58,7 +59,7 @@ async def test_raises_a_useful_error_when_no_vocal_stem_is_produced(service, tmp
     # what actually went wrong if the model's stem naming changes.
     service.separator = FakeSeparator(["song_(Instrumental)_model.wav"], tmp_path)
 
-    with pytest.raises(RuntimeError, match="No vocal stem"):
+    with pytest.raises(SeparationError, match="No vocal stem"):
         await service.remove_instrumental(b"AUDIO", "song.mp3")
 
 
@@ -75,7 +76,7 @@ async def test_cleans_up_temporary_files_on_success(service, tmp_path):
 async def test_cleans_up_temporary_files_on_failure(service, tmp_path):
     service.separator = FakeSeparator(["song_(Instrumental)_m.wav"], tmp_path)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(SeparationError):
         await service.remove_instrumental(b"AUDIO", "song.mp3")
 
     assert list(tmp_path.iterdir()) == [], "a failed job must not strand files"

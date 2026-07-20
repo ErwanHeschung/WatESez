@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     db_password: str = "postgres"
 
     audio_queue_max_size: int = 10
+    job_storage_dir: str = "./storage/jobs"
+    db_echo: bool = False
 
     @property
     def database_url(self) -> str:
